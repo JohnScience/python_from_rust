@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "py_version",
+    "iter_path",
+    "external_lib",
+]
