@@ -3,4 +3,6 @@ members = [
     "py_version",
     "iter_path",
     "external_lib",
+    "os_path_exists",
+    "nifti2png",
 ]

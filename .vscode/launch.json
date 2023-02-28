@@ -1,0 +1,175 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'py_version'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=py_version",
+                    "--package=py_version"
+                ],
+                "filter": {
+                    "name": "py_version",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'py_version'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=py_version",
+                    "--package=py_version"
+                ],
+                "filter": {
+                    "name": "py_version",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'iter_path'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=iter_path",
+                    "--package=iter_path"
+                ],
+                "filter": {
+                    "name": "iter_path",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'iter_path'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=iter_path",
+                    "--package=iter_path"
+                ],
+                "filter": {
+                    "name": "iter_path",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'external_lib'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=external_lib",
+                    "--package=external_lib"
+                ],
+                "filter": {
+                    "name": "external_lib",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'external_lib'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=external_lib",
+                    "--package=external_lib"
+                ],
+                "filter": {
+                    "name": "external_lib",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'nifti2png'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=nifti2png"
+                ],
+                "filter": {
+                    "name": "nifti2png",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'nifti2png'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=nifti2png",
+                    "--package=nifti2png"
+                ],
+                "filter": {
+                    "name": "nifti2png",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'nifti2png'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=nifti2png",
+                    "--package=nifti2png"
+                ],
+                "filter": {
+                    "name": "nifti2png",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

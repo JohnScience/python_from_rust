@@ -1,0 +1,17 @@
+[package]
+name = "nifti2png"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+pyo3 = { version = "0.18.1", features = ["auto-initialize"] }
+
+[lib]
+name = "nifti2png"
+path = "src/lib.rs"
+
+[[bin]]
+name = "nifti2png"
+path = "src/main.rs"

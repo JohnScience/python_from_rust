@@ -1,5 +1,4 @@
 use pyo3::prelude::*;
-use pyo3::types::PyUnicode;
 
 fn main() {
     println!(
@@ -8,17 +7,21 @@ fn main() {
     );
     let mut buffer = String::new();
     std::io::stdin().read_line(&mut buffer).unwrap();
+    let path = buffer.trim_end();
+
     Python::with_gil(|py| {
         let os = py.import("os").unwrap();
-        let path = PyUnicode::new(py, buffer.trim_end());
-
-        for entry in os
-            .call_method("listdir", (path,), None)
+        if os
+            .getattr("path")
             .unwrap()
-            .iter()
+            .call_method("exists", (path,), None)
+            .unwrap()
+            .extract::<bool>()
             .unwrap()
         {
-            println!("{}", entry.unwrap());
+            println!("Path exists");
+        } else {
+            println!("Path does not exist");
         }
-    })
+    });
 }
