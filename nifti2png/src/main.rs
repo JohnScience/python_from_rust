@@ -28,10 +28,11 @@ fn main() {
     let min_max = match minmax
         .trim_end()
         .split_whitespace()
-        .map(|s| s.parse::<u64>().unwrap())
+        .map(|s| s.parse::<u64>())
         .collect::<Vec<_>>()[..]
     {
-        [min, max] => (min, max),
+        [] => None,
+        [Ok(min), Ok(max)] => Some((min, max)),
         _ => panic!("Invalid input"),
     };
 
