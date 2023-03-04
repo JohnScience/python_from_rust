@@ -5,6 +5,9 @@ use pyo3::prelude::*;
 ///
 /// - The original code uses concatenation with `\\` to construct paths.
 /// - The original code does not format numbers with leading zeros.
+/// - The original code ignored the warning about lossy conversion:
+/// Lossy conversion from float64 to uint8. Range \[0, 1\]. Convert image to uint8 prior to saving to suppress this warning.
+/// Learn more about the warning [here](https://github.com/zhixuhao/unet/issues/125).
 pub fn convert(
     nii_files: &str,
     png_stub: Option<&str>,
@@ -14,12 +17,13 @@ pub fn convert(
         let os = py.import("os")?;
         let nib = py.import("nibabel")?;
         let np = py.import("numpy")?;
-        let (io, color, exposure) = {
+        let (io, color, exposure, img_as_ubyte) = {
             let skimage = py.import("skimage")?;
             (
                 skimage.getattr("io")?,
                 skimage.getattr("color")?,
                 skimage.getattr("exposure")?,
+                skimage.getattr("img_as_ubyte")?,
             )
         };
 
@@ -178,6 +182,10 @@ pub fn convert(
                         ))?,),
                         None,
                     )?;
+
+                    // this line silences a warning
+                    // https://github.com/zhixuhao/unet/issues/125
+                    let sz_rgb = img_as_ubyte.call((sz_rgb,), None)?;
 
                     io.call_method(
                         "imsave",
