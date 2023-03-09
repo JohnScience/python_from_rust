@@ -7,6 +7,8 @@ edition = "2021"
 
 [dependencies]
 pyo3 = { version = "0.18.1", features = ["auto-initialize"] }
+thiserror = "1.0.38"
+arrayvec = "0.7.2"
 
 [lib]
 name = "nifti2png"
