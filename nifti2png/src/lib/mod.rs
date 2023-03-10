@@ -1,7 +1,7 @@
-use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyFloat, PySlice, PyUnicode, PyIterator};
-use thiserror::Error;
 use arrayvec::ArrayVec;
+use pyo3::prelude::*;
+use pyo3::types::{PyDict, PyIterator, PySlice, PyUnicode};
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ErrorTy {
@@ -34,19 +34,31 @@ struct RelNiiFilesIter<'a> {
 }
 
 impl<'a> RelNiiFilesIter<'a> {
-    fn new(nib: &'a PyModule, os: &'a PyModule, nii_files: &'a str, base_png_stub: &'a PyUnicode) -> Result<Self, ErrorTy> {
+    fn new(
+        nib: &'a PyModule,
+        os: &'a PyModule,
+        nii_files: &'a str,
+        base_png_stub: &'a PyUnicode,
+    ) -> Result<Self, ErrorTy> {
         let listdir_iter = match os.call_method("listdir", (nii_files,), None) {
             Ok(listdir_res) => listdir_res.iter()?,
             Err(e) => return Err(ListDirFailed(e, nii_files.to_string())),
         };
-        Ok(Self{ nib, os, nii_files, listdir_iter, base_png_stub })
+        Ok(Self {
+            nib,
+            os,
+            nii_files,
+            listdir_iter,
+            base_png_stub,
+        })
     }
 
     fn png_stub(&self, nii_file: &PyAny) -> Result<&'a PyAny, ErrorTy> {
         // https://github.com/korepanov/repalungs/blob/b8c3f62f3015ed89fc360a2a7166a29b56d293f4/back/converter/converter.py#L66
-        let png_stub = self.os
-        .getattr("path")?
-        .call_method("join", (self.base_png_stub, nii_file), None)?;
+        let png_stub =
+            self.os
+                .getattr("path")?
+                .call_method("join", (self.base_png_stub, nii_file), None)?;
         Ok(png_stub)
     }
 
@@ -56,7 +68,8 @@ impl<'a> RelNiiFilesIter<'a> {
             "load",
             ({
                 // nii_files + "\\" + nii_file
-                self.os.getattr("path")?
+                self.os
+                    .getattr("path")?
                     .call_method("join", (self.nii_files, nii_file), None)?
             },),
             None,
@@ -64,44 +77,102 @@ impl<'a> RelNiiFilesIter<'a> {
         Ok(nii_obj)
     }
 
-    fn item(&self, nii_file: PyResult<&'a PyAny>) -> Result<(
-        // png_stub
-        &'a PyAny,
-        // nii_obj
-        &'a PyAny
-    ), ErrorTy> {
+    // TODO: improve naming
+    fn item(
+        &self,
+        nii_file: PyResult<&'a PyAny>,
+    ) -> Result<
+        (
+            // png_stub
+            &'a PyAny,
+            // nii_obj
+            &'a PyAny,
+        ),
+        ErrorTy,
+    > {
         let nii_file = nii_file?;
 
         let png_stub = self.png_stub(nii_file)?;
         let nii_obj = self.nii_obj(nii_file)?;
-        
+
         Ok((png_stub, nii_obj))
     }
 }
 
 impl<'a> Iterator for RelNiiFilesIter<'a> {
-    type Item = Result<(
-        // png_stub
-        &'a PyAny,
-        // nii_obj
-        &'a PyAny
-    ), ErrorTy>;
+    type Item = Result<
+        (
+            // png_stub
+            &'a PyAny,
+            // nii_obj
+            &'a PyAny,
+        ),
+        ErrorTy,
+    >;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.listdir_iter.next().map(|nii_file_res| self.item(nii_file_res))
+        self.listdir_iter
+            .next()
+            .map(|nii_file_res| self.item(nii_file_res))
     }
 }
 
+/// Loaded NIFTI image
 struct NiiImage<'a> {
     fdata: &'a PyAny,
     dims: ArrayVec<isize, MAX_DIMS>,
 }
 
+impl<'a> NiiImage<'a> {
+    fn rescale_intensity_to_unit_interval(&mut self, py: Python<'a>, exposure: &'a PyAny, minmax: Option<(u64,u64)>) -> Result<(), ErrorTy> {
+        // Rescale to 0..255 uint8
+        self.fdata = exposure.call_method(
+            "rescale_intensity",
+            (self.fdata,),
+            Some({
+                let dict = PyDict::new(py);
+                // Clamp input range if requested
+                match minmax {
+                    Some((imin, imax)) => {
+                        dict.set_item("in_range", (imin, imax))?;
+                    },
+                    None => (),
+                }
+                dict.set_item("out_range", (0.0, 1.0))?;
+                dict
+            }),
+        )?;
+        Ok(())
+    }
+}
+
+impl<'a> core::ops::Index<[isize; 2]> for NiiImage<'a> {
+    type Output = GrayscaleNiiSlice<'a>;
+
+    fn index(&self, index: [isize; 2]) -> &Self::Output {
+        if self.dims[MAX_DIMS-1] > 1 {
+            
+        }
+    }
+}
+
+// Iterator over pairs of (png_stub, nii_image) for all nii files in nii_files
+// where png_stub is a path to a directory where the png files for the NIFTI volume will be saved.
 struct RelNiiImageIter<'a>(RelNiiFilesIter<'a>);
 
 impl<'a> RelNiiImageIter<'a> {
-    fn new(nib: &'a PyModule, os: &'a PyModule, nii_files: &'a str, base_png_stub: &'a PyUnicode) -> Result<Self, ErrorTy> {
-        Ok(Self(RelNiiFilesIter::new(nib, os, nii_files, base_png_stub)?))
+    fn new(
+        nib: &'a PyModule,
+        os: &'a PyModule,
+        nii_files: &'a str,
+        base_png_stub: &'a PyUnicode,
+    ) -> Result<Self, ErrorTy> {
+        Ok(Self(RelNiiFilesIter::new(
+            nib,
+            os,
+            nii_files,
+            base_png_stub,
+        )?))
     }
 
     fn nii_obj2nii_image(nii_obj: &'a PyAny) -> Result<NiiImage<'a>, ErrorTy> {
@@ -126,11 +197,13 @@ impl<'a> RelNiiImageIter<'a> {
 
         let fdata = nii_obj.call_method("get_fdata", (), None)?;
 
-        Ok(NiiImage{ fdata, dims })
+        Ok(NiiImage { fdata, dims })
     }
 
-    fn nii_obj_res2nii_image_res(res: Result<(&'a PyAny,&'a PyAny), ErrorTy>) -> Result<(&'a PyAny, NiiImage<'a>), ErrorTy> {
-        let (png_stub,nii_obj) = res?;
+    fn nii_obj_res2nii_image_res(
+        res: Result<(&'a PyAny, &'a PyAny), ErrorTy>,
+    ) -> Result<(&'a PyAny, NiiImage<'a>), ErrorTy> {
+        let (png_stub, nii_obj) = res?;
         let nii_image = Self::nii_obj2nii_image(nii_obj)?;
         Ok((png_stub, nii_image))
     }
@@ -144,6 +217,26 @@ impl<'a> Iterator for RelNiiImageIter<'a> {
     }
 }
 
+struct GrayscaleNiiSlice<'a>(&'a PyAny);
+
+struct RelGrayscaleNiiSliceIter<'a>(RelNiiImageIter<'a>);
+
+impl<'a> RelGrayscaleNiiSliceIter<'a> {
+    fn new(
+        nib: &'a PyModule,
+        os: &'a PyModule,
+        nii_files: &'a str,
+        base_png_stub: &'a PyUnicode,
+    ) -> Result<Self, ErrorTy> {
+        Ok(Self(RelNiiImageIter::new(
+            nib,
+            os,
+            nii_files,
+            base_png_stub,
+        )?))
+    }
+}
+
 fn gray2ubyte_rgb<'a>(
     slice: &'a PyAny,
     // from skimage import color
@@ -151,11 +244,7 @@ fn gray2ubyte_rgb<'a>(
     // from skimage import img_as_ubyte
     img_as_ubyte: &'a PyAny,
 ) -> Result<&'a PyAny, ErrorTy> {
-    let rgb = color.call_method(
-        "gray2rgb",
-        (slice,),
-        None,
-    )?;
+    let rgb = color.call_method("gray2rgb", (slice,), None)?;
     // this line silences a warning
     // https://github.com/zhixuhao/unet/issues/125
     let ubyte_rgb = img_as_ubyte.call((rgb,), None)?;
@@ -171,11 +260,9 @@ fn save_ubyte_rgb_grayscale_slice(
     // from skimage import io
     io: &PyAny,
     // from PIL import Image
-    #[allow(non_snake_case)]
-    Image: &PyAny,
+    #[allow(non_snake_case)] Image: &PyAny,
     // from PIL import ImageOps
-    #[allow(non_snake_case)]
-    ImageOps: &PyAny,
+    #[allow(non_snake_case)] ImageOps: &PyAny,
 ) -> Result<(), ErrorTy> {
     io.call_method("imsave", (path, ubyte_sz_rgb), None)?;
     // TODO: use in-memory processing instead
@@ -195,6 +282,8 @@ fn save_ubyte_rgb_grayscale_slice(
 /// Learn more about the warning [here](https://github.com/zhixuhao/unet/issues/125).
 /// - The original code contains the
 /// [dead code with `nii_stub`](https://github.com/korepanov/repalungs/blob/b8c3f62f3015ed89fc360a2a7166a29b56d293f4/back/converter/converter.py#L69-L71)
+/// - The original code used np.min() and np.max() to calculate min and max values of the image
+/// to later then pass them as `in_range` optional parameter to `skimage.exposure.rescale_intensity`.
 pub fn convert(
     nii_files: &str,
     png_stub: Option<&str>,
@@ -234,53 +323,12 @@ pub fn convert(
         // https://github.com/korepanov/repalungs/blob/b8c3f62f3015ed89fc360a2a7166a29b56d293f4/back/converter/converter.py#L61-L64
         let png_stub = PyUnicode::new(py, png_stub.unwrap_or("slice"));
 
-        for res in RelNiiFilesIter::new(nib, os, nii_files, png_stub)? {
-            let (png_stub, nii_obj) = res?;
+        for res in RelNiiImageIter::new(nib, os, nii_files, png_stub)? {
+            let (png_stub, nii_image) = res?;
 
-            // https://github.com/korepanov/repalungs/blob/b8c3f62f3015ed89fc360a2a7166a29b56d293f4/back/converter/converter.py#L78
-            let hdr = nii_obj.getattr("header")?;
+            println!("\tMatrix size: ({:?}", nii_image.dims);
 
-            // https://github.com/korepanov/repalungs/blob/b8c3f62f3015ed89fc360a2a7166a29b56d293f4/back/converter/converter.py#L81
-            let nii_shape = hdr.call_method("get_data_shape", (), None)?;
-
-            let [nx, ny, nz] = [
-                nii_shape.get_item(0)?.extract::<isize>()?,
-                nii_shape.get_item(1)?.extract::<isize>()?,
-                nii_shape.get_item(2)?.extract::<isize>()?,
-            ];
-
-            let nt = match nii_shape.len()? {
-                3 => 1,
-                4 => nii_shape.get_item(3)?.extract::<isize>()?,
-                _ => panic!("Invalid input"),
-            };
-
-            println!("Loading voxel data");
-
-            let s = nii_obj.call_method("get_fdata", (), None)?;
-
-            println!("\tMatrix size: ({nx}, {ny}, {nz}, {nt})");
-
-            // Clamp input range if requested
-            let (imin, imax) = match minmax {
-                Some((min, max)) => (PyFloat::new(py, min as f64), PyFloat::new(py, max as f64)),
-                None => (
-                    np.call_method("min", (s,), None)?.downcast().map_err(PyErr::from)?,
-                    np.call_method("max", (s,), None)?.downcast().map_err(PyErr::from)?,
-                ),
-            };
-
-            // Rescale to 0..255 uint8
-            let s = exposure.call_method(
-                "rescale_intensity",
-                (s,),
-                Some({
-                    let dict = PyDict::new(py);
-                    dict.set_item("in_range", (imin, imax))?;
-                    dict.set_item("out_range", (0.0, 1.0))?;
-                    dict
-                }),
-            )?;
+            nii_image.rescale_intensity_to_unit_interval(py, exposure, minmax);
 
             for t in 0..=nt {
                 let png_dir = png_stub;
@@ -324,11 +372,8 @@ pub fn convert(
                         None,
                     )?;
 
-                    let grayscale_slice = st.get_item((
-                        PySlice::new(py, 0, nx, 1),
-                        PySlice::new(py, 0, ny, 1),
-                        z,
-                    ))?;
+                    let grayscale_slice =
+                        st.get_item((PySlice::new(py, 0, nx, 1), PySlice::new(py, 0, ny, 1), z))?;
 
                     // Write single byte image slice to jpg file
                     let ubyte_sz_rgb = gray2ubyte_rgb(grayscale_slice, color, img_as_ubyte)?;
