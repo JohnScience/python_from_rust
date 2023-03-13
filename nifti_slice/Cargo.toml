@@ -1,5 +1,5 @@
 [package]
-name = "nifti2png"
+name = "nifti_slice"
 version = "0.1.0"
 edition = "2021"
 
@@ -12,9 +12,9 @@ arrayvec = "0.7.2"
 image = "0.24.5"
 
 [lib]
-name = "nifti2png"
+name = "nifti_slice"
 path = "src/lib/mod.rs"
 
 [[bin]]
-name = "nifti2png"
+name = "nifti_slice"
 path = "src/main.rs"

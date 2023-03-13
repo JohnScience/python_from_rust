@@ -1,8 +1,14 @@
-use pyo3::PyAny;
+use image::RgbImage;
+use pyo3::{PyAny, Python};
+use pyo3::types::PyUnicode;
 
 use crate::error_ty::ErrorTy;
 
-pub(crate) struct RescaledIntensityNiiSlice<'a>(&'a PyAny);
+pub(crate) struct RescaledIntensityNiiSlice<'a> {
+    slice: &'a PyAny,
+    width: isize,
+    height: isize,
+}
 
 fn gray2ubyte_rgb<'a>(
     slice: &'a PyAny,
@@ -41,8 +47,12 @@ fn save_ubyte_rgb_grayscale_slice(
 }
 
 impl<'a> RescaledIntensityNiiSlice<'a> {
-    pub(crate) fn new(nii_slice: &'a PyAny) -> Self {
-        Self(nii_slice)
+    pub(crate) fn new(nii_slice: &'a PyAny, width: isize, height: isize) -> Self {
+        Self {
+            slice: nii_slice,
+            width,
+            height,
+        }
     }
 
     pub(crate) fn save(
@@ -54,7 +64,42 @@ impl<'a> RescaledIntensityNiiSlice<'a> {
         #[allow(non_snake_case)] Image: &PyAny,
         #[allow(non_snake_case)] ImageOps: &PyAny,
     ) -> Result<(), ErrorTy> {
-        let ubyte_sz_rgb = gray2ubyte_rgb(self.0, color, img_as_ubyte)?;
+        let ubyte_sz_rgb = gray2ubyte_rgb(self.slice, color, img_as_ubyte)?;
         save_ubyte_rgb_grayscale_slice(path, ubyte_sz_rgb, io, Image, ImageOps)
+    }
+
+    pub(crate) fn as_rgb_image(
+        &self,
+        py: Python,
+        io: &PyAny,
+        color: &PyAny,
+        img_as_ubyte: &PyAny,
+        #[allow(non_snake_case)] Image: &PyAny,
+        #[allow(non_snake_case)] ImageOps: &PyAny,
+    ) -> Result<RgbImage, ErrorTy> {
+        let temp_dir = std::env::temp_dir();
+        let temp_file = {
+            let mut temp_dir = temp_dir;
+            temp_dir.push("tmp.png");
+            temp_dir
+        };
+        let temp_file_py = PyUnicode::new(py, temp_file.to_str().ok_or(ErrorTy::TempDirNotUtf8)?);
+        self.save(&temp_file_py, io, color, img_as_ubyte, Image, ImageOps)?;
+        let img = image::open(&temp_file)
+            .map_err(|e| ErrorTy::ImageOpenFailed(e, temp_file.to_string_lossy().to_string()))?;
+        Ok(img.to_rgb8())
+    }
+
+    pub(crate) fn as_raw_rgb_image_buffer(
+        &self,
+        py: Python,
+        io: &PyAny,
+        color: &PyAny,
+        img_as_ubyte: &PyAny,
+        #[allow(non_snake_case)] Image: &PyAny,
+        #[allow(non_snake_case)] ImageOps: &PyAny,
+    ) -> Result<Vec<u8>, ErrorTy> {
+        let img = self.as_rgb_image(py, io, color, img_as_ubyte, Image, ImageOps)?;
+        Ok(img.into_raw())
     }
 }

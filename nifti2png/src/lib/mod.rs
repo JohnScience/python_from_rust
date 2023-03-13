@@ -75,9 +75,9 @@ pub fn convert(
 
         for res in RelNiiImagesIter::new(nib, os, nii_files, png_stub)? {
             let (png_stub, nii_image): (TargetImageDir, NiiImage) = res?;
-            TargetImageDir::ensure_exists(&png_stub, os)?;
+            TargetImageDir::ensure_exists(&png_stub)?;
 
-            println!("\tMatrix size: ({:?}", nii_image.dims);
+            println!("\tMatrix size: ({:?})", nii_image.dims);
 
             let nii_image: RescaledIntensityNiiImage =
                 nii_image.rescale_intensity_to_unit_interval(py, exposure, minmax)?;
@@ -98,6 +98,8 @@ pub fn convert(
                     )?;
 
                     nii_slice.save(png_path, io, color, img_as_ubyte, &Image, &ImageOps)?;
+                    // let buffer = nii_slice.as_raw_rgb_image_buffer(py, io, color, img_as_ubyte, Image, ImageOps)?;
+                    // println!("Buffer: {:?}", buffer);
                 }
             }
         }

@@ -1,7 +1,6 @@
 use core::marker::PhantomData;
-use std::path::PathBuf;
+use std::{path::PathBuf, fs::create_dir_all};
 
-use pyo3::PyAny;
 mod kind;
 pub mod existence;
 use kind::Kind;
@@ -25,14 +24,11 @@ pub(crate) fn TargetImageDir<'a>(dir: PathBuf) -> TargetImageDir<'a> {
 }
 
 impl<'a> TargetImageDir<'a> {
-    pub(crate) fn ensure_exists(&self, os: &'a PyAny) -> Result<(), ErrorTy> {
+    pub(crate) fn ensure_exists(&self) -> Result<(), ErrorTy> {
         let Self { path, .. } = &*self;
-        if !(os
-            .getattr("path")?
-            .call_method("exists", (path,), None)?
-            .extract::<bool>()?)
+        if !path.try_exists().map_err(|e| ErrorTy::TryExistsFailed(e, path.to_string_lossy().into_owned()))?
         {
-            os.call_method("makedirs", (path,), None)?;
+            create_dir_all(path).map_err(|e| ErrorTy::CreateDirAllFailed(e, path.to_string_lossy().into_owned()))?;
         };
         Ok(())
     }

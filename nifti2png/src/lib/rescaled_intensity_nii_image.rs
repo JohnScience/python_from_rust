@@ -22,6 +22,6 @@ impl<'a> RescaledIntensityNiiImage<'a> {
     ) -> Result<RescaledIntensityNiiSlice<'a>, ErrorTy> {
         self.0
             .get_slice(py, index)
-            .map(RescaledIntensityNiiSlice::new)
+            .map(|slice| (RescaledIntensityNiiSlice::new(slice, self.dim(0), self.dim(1))))
     }
 }

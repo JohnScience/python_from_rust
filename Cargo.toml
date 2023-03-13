@@ -5,4 +5,5 @@ members = [
     "external_lib",
     "os_path_exists",
     "nifti2png",
+    "nifti_slice",
 ]
