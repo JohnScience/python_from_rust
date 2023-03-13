@@ -5,7 +5,16 @@ fn main() {
         "Enter a path to a directory with NIFTI files, e.g. {example_asset}",
         example_asset = {
             let mut buf = std::env::current_dir().unwrap();
-            buf.push("assets");
+            match &buf {
+                p if p.ends_with("python_from_rust") => {
+                    buf.push("assets");
+                }
+                p if p.ends_with("nifti2png") => {
+                    buf.pop();
+                    buf.push("assets");
+                }
+                _ => panic!("The current directory is neither a crate root nor a workplace root"),
+            };
             buf
         }
         .display()
