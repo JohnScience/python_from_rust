@@ -1,10 +1,12 @@
+use std::path::PathBuf;
+
 use crate::{
     error_ty::ErrorTy::{self, *},
     target_path::TargetImageDir,
 };
 use pyo3::{
     prelude::*,
-    types::{PyIterator, PyUnicode},
+    types::PyIterator,
 };
 
 /// Iterator over pairs of (png_stub, nii_obj) for all nii files in nii_files
@@ -17,7 +19,7 @@ where
     nib: &'a PyModule,
     os: &'a PyModule,
     nii_files: &'a str,
-    base_png_stub: &'a PyUnicode,
+    base_png_stub: PathBuf,
     listdir_iter: &'a PyIterator,
 }
 
@@ -26,7 +28,7 @@ impl<'a> RelNiiFilesIter<'a> {
         nib: &'a PyModule,
         os: &'a PyModule,
         nii_files: &'a str,
-        base_png_stub: &'a PyUnicode,
+        base_png_stub: PathBuf,
     ) -> Result<Self, ErrorTy> {
         let listdir_iter = match os.call_method("listdir", (nii_files,), None) {
             Ok(listdir_res) => listdir_res.iter()?,
@@ -42,12 +44,9 @@ impl<'a> RelNiiFilesIter<'a> {
     }
 
     fn png_stub(&self, nii_file: &PyAny) -> Result<TargetImageDir<'a>, ErrorTy> {
+        let nii_file = nii_file.extract::<String>()?;
         // https://github.com/korepanov/repalungs/blob/b8c3f62f3015ed89fc360a2a7166a29b56d293f4/back/converter/converter.py#L66
-        let png_stub =
-            self.os
-                .getattr("path")?
-                .call_method("join", (self.base_png_stub, nii_file), None)?;
-        Ok(TargetImageDir(png_stub))
+        Ok(TargetImageDir(self.base_png_stub.join(nii_file)))
     }
 
     fn nii_obj(&self, nii_file: &PyAny) -> Result<&'a PyAny, ErrorTy> {

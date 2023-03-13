@@ -1,9 +1,11 @@
+use std::path::PathBuf;
+
 use crate::{
     error_ty::ErrorTy, nii_image::NiiImage, rel_nii_files_iter::RelNiiFilesIter,
     target_path::TargetImageDir,
 };
 use arrayvec::ArrayVec;
-use pyo3::{prelude::*, types::PyUnicode};
+use pyo3::prelude::*;
 
 // Iterator over pairs of (png_stub, nii_image) for all nii files in nii_files
 // where png_stub is a path to a directory where the png files for the NIFTI volume will be saved.
@@ -14,7 +16,7 @@ impl<'a> RelNiiImagesIter<'a> {
         nib: &'a PyModule,
         os: &'a PyModule,
         nii_files: &'a str,
-        base_png_stub: &'a PyUnicode,
+        base_png_stub: PathBuf,
     ) -> Result<Self, ErrorTy> {
         Ok(Self(RelNiiFilesIter::new(
             nib,

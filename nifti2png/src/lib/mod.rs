@@ -1,5 +1,6 @@
+use std::path::PathBuf;
+
 use pyo3::prelude::*;
-use pyo3::types::PyUnicode;
 
 mod error_ty;
 use error_ty::ErrorTy::{self, *};
@@ -70,7 +71,7 @@ pub fn convert(
             .map_err(MissingThirdPartyLibrary)?;
 
         // https://github.com/korepanov/repalungs/blob/b8c3f62f3015ed89fc360a2a7166a29b56d293f4/back/converter/converter.py#L61-L64
-        let png_stub = PyUnicode::new(py, png_stub.unwrap_or("slice"));
+        let png_stub = PathBuf::from(png_stub.unwrap_or("slice"));
 
         for res in RelNiiImagesIter::new(nib, os, nii_files, png_stub)? {
             let (png_stub, nii_image): (TargetImageDir, NiiImage) = res?;
@@ -82,7 +83,7 @@ pub fn convert(
                 nii_image.rescale_intensity_to_unit_interval(py, exposure, minmax)?;
 
             for t in 0..nii_image.dim(MAX_DIMS - 1) {
-                println!("\tVolume {t} -> {}", png_stub.0);
+                println!("\tVolume {t} -> {}", png_stub.path.display());
 
                 for z in 0..nii_image.dim(MAX_DIMS - 2) {
                     // https://github.com/korepanov/repalungs/blob/b8c3f62f3015ed89fc360a2a7166a29b56d293f4/back/converter/converter.py#L119-L122
@@ -92,7 +93,7 @@ pub fn convert(
                     // PNG filename
                     let png_path = os.getattr("path")?.call_method(
                         "join",
-                        (png_stub.0, format!("{z:04}.png")),
+                        (&png_stub.path, format!("{z:04}.png")),
                         None,
                     )?;
 
